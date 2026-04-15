@@ -1,0 +1,60 @@
+Role: You are a Senior AI Engineer specializing in LangChain/LangGraph and autonomous agentic workflows. Your goal is to refactor a modular ReAct agent to improve its utility and resilience.
+
+Context:
+I have an existing ReAct agent. I need to extend its capabilities by implementing a suite of specialized tools. The project follows a strict modular structure:
+
+    tools.py: Handles tool definitions and API logic.
+
+    prompts.py: Contains the system instructions and ReAct logic.
+
+    agent_logic.py: Manages the LLM binding and the execution loop.
+
+Task:
+Refactor the agent to include the following four tools, ensuring they are compatible with the langchain.agents.format_scratchpad logic or LangGraph's ToolNode.
+1. Tool Implementations (tools.py)
+
+    News Tool: Integrate newsdata.io.
+
+        Logic: Fetch data based on a query, parse the JSON, and return a string containing only the top 3 headlines and their URLs.
+
+        Constraint: Implement strict error handling for API timeouts or limit exhaustion.
+
+    Python REPL: Use langchain_experimental.utilities.PythonREPL.
+
+        Logic: Create a tool that executes code and returns stdout or stderr.
+
+        Security: Ensure it is instantiated for the current session and wrapped in a try-except block to catch syntax or execution errors.
+
+    File Editor: Use FileManagementToolkit from LangChain.
+
+        Configuration: Set root_dir to ./agent_workspace.
+
+        Scope: Provide read_file, write_file, and list_directory.
+
+    Temporal Tool: A custom @tool decorated function that returns the current UTC date and time in a human-readable format.
+
+2. Logic & Registry Requirements
+
+    Registry: Implement a get_all_tools() function that returns a list of these tool instances.
+
+    Resilience: Every tool must return a string to the agent. If an error occurs, do not crash the script; instead, return: "Error: [Description of error]. Please adjust your input or try a different tool."
+
+    Environment: Use os.getenv for the News API key.
+
+3. System Prompt Refinement (prompts.py)
+
+Update the ReAct system prompt to include:
+
+    Contextual Awareness: The agent should know today's date (via the Temporal tool) before making plans.
+
+    Tool Selection Logic: Explicitly instruct the agent to use the Python REPL for ephemeral logic/math and the File Editor for persistent storage of results or data analysis reports.
+
+4. Output Request
+
+Please provide the complete, production-ready code for:
+
+    tools.py (including imports and the registry function).
+
+    agent_logic.py (showing how tools are bound to the LLM and the ReAct loop is initialized).
+
+    The specific system prompt block for prompts.py.

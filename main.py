@@ -42,7 +42,7 @@ def load_environment():
     """
     load_dotenv()
 
-    required_vars = ["GROQ_API_KEY", "TAVILY_API_KEY"]
+    required_vars = ["GROQ_API_KEY", "TAVILY_API_KEY", "NEWSDATA_API_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
 
     if missing:
@@ -74,15 +74,17 @@ def load_environment():
 # ---------------------------------------------------------------------------
 
 BANNER = """
-╔══════════════════════════════════════════════════════════════╗
-║                  🤖 ReAct Personal Assistant                ║
-║                                                              ║
-║  Tools: Arxiv | Wikipedia | Tavily Web Search                ║
-║  Model: Groq (qwen/qwen3-32b)                               ║
-║                                                              ║
-║  Type your question and press Enter.                         ║
-║  Type 'quit' or 'exit' to leave.                             ║
-╚══════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════╗
+║                   🤖 ReAct Personal Assistant                   ║
+║                                                                  ║
+║  Research : Arxiv | Wikipedia | Tavily | News                    ║
+║  Compute  : Python REPL | Temporal                               ║
+║  Files    : Read | Write | List (agent_workspace/)               ║
+║  Model    : Groq (qwen/qwen3-32b)                               ║
+║                                                                  ║
+║  Type your question and press Enter.                             ║
+║  Type 'quit' or 'exit' to leave.                                 ║
+╚══════════════════════════════════════════════════════════════════╝
 """
 
 

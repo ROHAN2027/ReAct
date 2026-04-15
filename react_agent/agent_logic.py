@@ -8,6 +8,7 @@ Responsibilities:
     - Define the LangGraph state schema
     - Build the execution graph with Thought/Action/Observation loop
     - Provide a high-level `run_agent()` function for query execution
+    - SafeToolNode for resilient tool execution with error recovery
 """
 
 import logging
@@ -58,6 +59,9 @@ class SafeToolNode:
     """
     A wrapper around LangGraph's ToolNode that catches tool execution
     errors and returns them as ToolMessages so the LLM can recover.
+
+    Each tool call is processed individually so that one failing tool
+    does not block others in a parallel tool-calling scenario.
     """
 
     def __init__(self, tools: list):
@@ -69,8 +73,8 @@ class SafeToolNode:
         Execute tool calls from the last AI message, catching any errors.
 
         If a tool raises an exception, the error is returned as a
-        ToolMessage so the LLM can observe the failure and try a
-        different approach.
+        ToolMessage with a descriptive message so the LLM can observe
+        the failure and try a different approach.
         """
         messages = state["messages"]
         last_message = messages[-1]
@@ -98,9 +102,15 @@ class SafeToolNode:
                         tool_args,
                     )
                     result = tool.invoke(tool_args)
+
+                    # Ensure result is always a string
+                    result_str = str(result) if result is not None else (
+                        "Tool executed successfully (no output)."
+                    )
+
                     results.append(
                         ToolMessage(
-                            content=str(result),
+                            content=result_str,
                             tool_call_id=tool_call_id,
                             name=tool_name,
                         )
@@ -109,9 +119,12 @@ class SafeToolNode:
 
                 except Exception as e:
                     error_msg = (
-                        f"Error executing tool '{tool_name}': {type(e).__name__}: {e}"
+                        f"Error: {type(e).__name__}: {e}. "
+                        "Please adjust your input or try a different tool."
                     )
-                    logger.error(error_msg)
+                    logger.error(
+                        "Tool '%s' failed: %s", tool_name, error_msg
+                    )
                     results.append(
                         ToolMessage(
                             content=error_msg,
@@ -149,6 +162,11 @@ def create_agent(model: str = DEFAULT_MODEL):
         START → agent (LLM with tools) ←→ tools (with error handling)
                                         → END (when no tool calls)
 
+    The agent node prepends a ReAct system message that includes:
+        - Dynamic tool descriptions
+        - Contextual awareness instructions (temporal tool)
+        - Tool selection guidance (REPL vs File Editor)
+
     Args:
         model: The Groq model identifier to use.
 
@@ -156,9 +174,13 @@ def create_agent(model: str = DEFAULT_MODEL):
         tuple: (compiled_graph, tools_list) — the compiled LangGraph
                StateGraph and the list of tool instances.
     """
-    # 1. Initialize tools
+    # 1. Initialize all tools (7 individual + 3 from file toolkit = 10 total)
     tools = get_all_tools()
-    logger.info("Tools loaded: %s", [t.name for t in tools])
+    logger.info(
+        "Tools loaded (%d): %s",
+        len(tools),
+        [t.name for t in tools],
+    )
 
     # 2. Build the system message with tool descriptions
     system_message = build_system_message(tools)
