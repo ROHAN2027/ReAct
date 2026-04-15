@@ -1,0 +1,28 @@
+Role: You are an expert Senior Software Engineer and AI Architect specializing in LangChain, Python modular design, and the ReAct framework.
+
+Task: I will provide a Jupyter Notebook containing experimental code for an agent. Your goal is to refactor this "flat" code into a professional, production-ready directory structure using a ReAct pattern.
+
+Structural Requirements:
+Break the code into the following specific scripts:
+
+    tools.py: Define individual functions/classes for each tool (e.g., Search, Calculator, Database lookups). Ensure each has a clear docstring for the LLM to read.
+
+    prompts.py: Centralize the ReAct system prompt, including the Thought/Action/Observation loop logic.
+
+    agent_logic.py: The core engine that initializes the LLM, binds the tools, and manages the execution loop.
+
+    main.py: The entry point to run the Personal Assistant, handle user input, and manage environment variables.
+
+Technical Constraints:
+
+    ReAct Logic: The agent must explicitly follow the "Thought, Action, Action Input, Observation" flow.
+
+    Modularity: Use pydantic for tool input validation where possible.
+
+    Error Handling: Add robust try-except blocks for tool execution so the agent can "recover" if a tool fails.
+
+    Integration: Ensure all scripts are properly imported so main.py runs seamlessly.
+
+Output: First, provide a file tree structure of the proposed design. Then, provide the refactored code for each script based on the notebook I am about to provide.
+
+[INSERT YOUR NOTEBOOK CODE/CONTENT HERE]
