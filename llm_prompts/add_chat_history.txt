@@ -7,7 +7,7 @@ Technical Stack:
 
     Vector DB: Use Chroma or FAISS with a local persistence directory (./agent_memory).
 
-    Embeddings: Use OpenAIEmbeddings or HuggingFaceEmbeddings.
+    Embeddings: Use google/embeddinggemma-300m(from hugging face you can also use any thing other than this)
 
     Framework: LangChain VectorStoreRetrieverMemory or a custom retrieval tool.
 
