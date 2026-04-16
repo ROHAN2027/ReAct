@@ -10,3 +10,7 @@ langchain-tavily
 arxiv
 wikipedia
 requests
+chromadb
+langchain-chroma
+langchain-huggingface
+sentence-transformers
