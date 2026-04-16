@@ -1,0 +1,41 @@
+Role: You are a Senior AI Engineer specializing in LangChain and Vector Databases. Your task is to implement a persistent "Long-Term Memory" system using a Vector DB (RAG) for an existing ReAct agent.
+
+Context:
+The agent currently uses ephemeral memory. I need it to store every turn of the conversation into a local Vector Store and retrieve relevant past context for future sessions.
+
+Technical Stack:
+
+    Vector DB: Use Chroma or FAISS with a local persistence directory (./agent_memory).
+
+    Embeddings: Use OpenAIEmbeddings or HuggingFaceEmbeddings.
+
+    Framework: LangChain VectorStoreRetrieverMemory or a custom retrieval tool.
+
+Task Requirements:
+1. Vector Memory Implementation (tools.py)
+
+    Memory Search Tool: Create a tool called SearchLongTermMemory. It should take a query string and return the top-K most relevant snippets from past conversations stored in the Vector DB.
+
+    Persistence Logic: Ensure the Vector Store is initialized with a persist_directory. If the directory exists, load it; if not, create it.
+
+2. Auto-Indexing Logic (agent_logic.py)
+
+    Upsert Mechanism: Modify the execution loop so that after every successful "Action/Observation" cycle or at the end of a session, the interaction (User Input + Agent Response) is embedded and saved to the Vector DB.
+
+    Metadata: Include timestamps and session IDs in the metadata to help the agent distinguish between recent and ancient history.
+
+3. Prompt Engineering (prompts.py)
+
+    System Prompt Update: Instruct the agent to use the SearchLongTermMemory tool whenever a user refers to something from a "previous session," "last time," or "my preferences."
+
+    Context Injection: Update the ReAct template to include a section for "Retrieved Context" so the agent can ground its response in the data returned by the memory tool.
+
+4. Output Request
+
+Provide the updated code for:
+
+    tools.py: Initialization of the Vector Store and the SearchLongTermMemory tool definition.
+
+    agent_logic.py: The logic for saving new interactions to the DB during the agent's runtime.
+
+    prompts.py: The updated instructions for handling long-term context.
