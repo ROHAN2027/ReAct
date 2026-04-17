@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ReAct Personal Assistant — An intelligent AI agent with long-term memory, web search, code execution, and more.">
+    <title>ReAct Assistant</title>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- ====== HEADER ====== -->
+    <header id="app-header">
+        <div class="header-left">
+            <div class="logo-group">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <circle cx="14" cy="14" r="12" stroke="url(#grad1)" stroke-width="2.5"/>
+                        <circle cx="14" cy="14" r="5" fill="url(#grad1)"/>
+                        <path d="M14 2 L14 6 M14 22 L14 26 M2 14 L6 14 M22 14 L26 14" stroke="url(#grad1)" stroke-width="1.5" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="grad1" x1="0" y1="0" x2="28" y2="28">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="100%" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>ReAct Assistant</h1>
+                    <span class="subtitle">Reasoning + Acting Agent</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div id="memory-indicator" class="memory-badge" title="Long-term memories stored">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1C4.686 1 2 3.686 2 7c0 2.21 1.21 4.14 3 5.17V14a1 1 0 001 1h4a1 1 0 001-1v-1.83c1.79-1.03 3-2.96 3-5.17 0-3.314-2.686-6-6-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M6 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span id="memory-count">0</span>
+            </div>
+            <div id="session-badge" class="session-badge" title="Current session ID">
+                <span class="session-dot"></span>
+                <span id="session-id-text">—</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ====== MAIN CHAT AREA ====== -->
+    <main id="chat-container">
+        <div id="messages" class="messages-list">
+            <!-- Welcome message -->
+            <div class="welcome-screen" id="welcome-screen">
+                <div class="welcome-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <circle cx="32" cy="32" r="28" stroke="url(#grad2)" stroke-width="2" opacity="0.3"/>
+                        <circle cx="32" cy="32" r="18" stroke="url(#grad2)" stroke-width="2" opacity="0.5"/>
+                        <circle cx="32" cy="32" r="8" fill="url(#grad2)" opacity="0.8"/>
+                        <defs>
+                            <linearGradient id="grad2" x1="0" y1="0" x2="64" y2="64">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="100%" stop-color="#a78bfa"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h2>Hello! I'm your ReAct Assistant</h2>
+                <p>I can search the web, read papers, run code, manage files, and remember our past conversations.</p>
+                <div class="capability-chips">
+                    <span class="chip" data-query="Search arxiv for recent papers on transformer architectures">📄 Research Papers</span>
+                    <span class="chip" data-query="What are the latest news on artificial intelligence?">📰 Latest News</span>
+                    <span class="chip" data-query="Calculate the compound interest on $10,000 at 5% for 10 years">🧮 Calculations</span>
+                    <span class="chip" data-query="What did we discuss in our previous session?">🧠 Past Memory</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ====== INPUT BAR ====== -->
+    <footer id="input-bar">
+        <div class="input-wrapper">
+            <textarea
+                id="user-input"
+                placeholder="Ask me anything..."
+                rows="1"
+                autofocus
+            ></textarea>
+            <button id="send-btn" title="Send message (Enter)" disabled>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M3 10L17 3L10 17L9 11L3 10Z" fill="currentColor"/>
+                </svg>
+            </button>
+        </div>
+        <div class="input-hint">
+            Press <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line
+        </div>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

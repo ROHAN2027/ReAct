@@ -13,5 +13,8 @@ requests
 faiss-cpu
 sentence-transformers
 langchain-huggingface
+fastapi
+uvicorn[standard]
+sse-starlette
 chromadb
 langchain-chroma

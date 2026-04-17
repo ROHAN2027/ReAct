@@ -1,0 +1,116 @@
+# Premium Web Frontend for ReAct Agent
+
+Build a stunning, dark-mode chat interface that connects to the existing ReAct agent via a FastAPI backend with Server-Sent Events (SSE) for real-time streaming.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["Browser UI"] -->|POST /api/chat| B["FastAPI Server"]
+    A -->|GET /api/chat/stream| B
+    B --> C["LangGraph Agent"]
+    C -->|tool calls| D["Tools + Memory"]
+    D -->|observations| C
+    C -->|streamed events| B
+    B -->|SSE events| A
+```
+
+**Backend**: FastAPI wrapping the existing `create_agent()` + `save_interaction_to_memory()`. A single `/api/chat` endpoint accepts user messages and streams back events (thinking, tool calls, observations, final answer) as SSE.
+
+**Frontend**: A single-page app with `index.html`, `style.css`, and `app.js` served from a `static/` directory. No framework — vanilla JS with modern CSS.
+
+## Design Aesthetic
+
+- **Dark mode** with deep navy/charcoal base (`#0a0a1a`, `#12122a`)
+- **Glassmorphism** panels with `backdrop-filter: blur()` and subtle borders
+- **Accent gradient**: Electric blue → purple (`#6366f1` → `#8b5cf6`)
+- **Typography**: Inter from Google Fonts
+- **Micro-animations**: Messages slide in, tool calls pulse, typing indicator with bouncing dots
+- **Tool call visualizer**: Collapsible cards showing tool name, input, and output with syntax highlighting
+- **Memory indicator**: A subtle glow/badge when the agent accesses long-term memory
+- **Session panel**: Sidebar showing session ID and memory stats
+
+## Proposed Changes
+
+### Backend API
+
+#### [NEW] [server.py](file:///home/divyansh/projects/dlProject/ReAct/server.py)
+
+FastAPI application with:
+
+- **`POST /api/chat`** — Accepts `{"message": "..."}`, runs the agent, streams back SSE events:
+  - `event: thinking` — agent is reasoning
+  - `event: tool_call` — `{name, args}` when a tool is invoked
+  - `event: tool_result` — the observation from the tool
+  - `event: answer` — the final response text
+  - `event: memory_saved` — confirmation that the interaction was indexed
+  - `event: error` — if something goes wrong
+- **`GET /api/memory/stats`** — Returns memory stats (doc count, session count)
+- **`GET /`** — Serves the static frontend
+- Agent + memory_manager initialized once at startup
+
+---
+
+### Frontend
+
+#### [NEW] `static/` directory
+
+#### [NEW] [index.html](file:///home/divyansh/projects/dlProject/ReAct/static/index.html)
+
+Semantic HTML5 structure:
+- Header with logo/title and session info
+- Main chat area with scrollable message container
+- Message bubbles (user = right-aligned, agent = left-aligned)
+- Collapsible tool-call cards inside agent messages
+- Input bar with send button at the bottom
+- Subtle memory indicator in the header
+
+#### [NEW] [style.css](file:///home/divyansh/projects/dlProject/ReAct/static/style.css)
+
+Complete design system:
+- CSS custom properties for the entire color palette
+- Dark glassmorphism panels
+- Message bubble styles with gradient accents
+- Tool-call card styles with expand/collapse animations
+- Typing indicator animation (bouncing dots)
+- Smooth scroll behavior
+- Input bar with glow-on-focus effect
+- Responsive layout (mobile-friendly)
+- Keyframe animations for message entry
+
+#### [NEW] [app.js](file:///home/divyansh/projects/dlProject/ReAct/static/app.js)
+
+Vanilla JS application:
+- `sendMessage()` — POST to `/api/chat`, open SSE stream, parse events
+- `renderMessage()` — Create DOM elements for user/agent messages
+- `renderToolCall()` — Animated tool-call cards with collapsible details
+- `showTypingIndicator()` / `hideTypingIndicator()`
+- `scrollToBottom()` with smooth animation
+- Markdown rendering for agent responses (using a lightweight inline parser)
+- Keyboard shortcut: Enter to send, Shift+Enter for newline
+
+---
+
+### Dependencies
+
+#### [MODIFY] [requirements.txt](file:///home/divyansh/projects/dlProject/ReAct/requirements.txt)
+
+Add:
+```
+fastapi
+uvicorn[standard]
+sse-starlette
+```
+
+## Verification Plan
+
+### Automated Tests
+- Start server with `uvicorn server:app` and verify it serves the frontend
+- Send a test message via `curl` to `/api/chat` and verify SSE stream
+
+### Manual Verification
+- Open browser to `http://localhost:8000`
+- Send a message, verify tool calls appear as collapsible cards
+- Verify memory indicator glows when `search_long_term_memory` is used
+- Test mobile responsiveness with browser devtools
+- Restart server, ask "what did I ask last time?" and verify memory recall
