@@ -11,6 +11,7 @@ Includes:
     - Contextual awareness (temporal tool usage)
     - Tool selection logic (REPL vs File Editor guidance)
     - Error recovery instructions
+    - Long-term memory retrieval instructions
 """
 
 from langchain_core.messages import SystemMessage
@@ -27,6 +28,9 @@ that you can use to answer the user's questions accurately.
 
 ## Your Available Tools
 {tool_descriptions}
+
+## Retrieved Context from Long-Term Memory
+{retrieved_context}
 
 ## How You Must Reason (ReAct Pattern)
 
@@ -59,6 +63,22 @@ time. Never assume or guess the current date. This is critical for:
 - Comparing dates or deadlines
 - Any query involving recency or timeliness
 
+## Long-Term Memory
+
+You have access to a `search_long_term_memory` tool that retrieves relevant \
+snippets from past conversations stored in a persistent Vector Database.
+
+**When to use it:**
+- The user refers to a "previous session", "last time", "earlier", or "before"
+- The user mentions "my preferences", "my settings", or "what I asked about"
+- The user says "remember when", "as I said", "we discussed", or "you told me"
+- You need context from prior interactions to give a better answer
+- The query seems to reference information not present in the current conversation
+
+**Always search memory BEFORE answering** when historical context seems \
+relevant. Combine the retrieved memories with your current reasoning to \
+provide a grounded, contextual response.
+
 ## Tool Selection Logic
 
 Choose the right tool for the right job:
@@ -68,6 +88,10 @@ Choose the right tool for the right job:
   - `wikipedia` — for general knowledge, biographies, history, and concepts.
   - `tavily_search_results_json` — for broad web searches and real-time info.
   - `news_search` — specifically for recent news headlines and current events.
+
+- **Long-Term Memory**:
+  - `search_long_term_memory` — to recall past conversations, user preferences, \
+and historical context from previous sessions.
 
 - **Computation & Ephemeral Logic**:
   - `python_repl` — for **all** calculations, math, data transformations, \
@@ -107,25 +131,38 @@ save the report with `write_file` so the user has a persistent copy.
 """
 
 
-def build_system_message(tools: list) -> SystemMessage:
+def build_system_message(
+    tools: list,
+    retrieved_context: str = "",
+) -> SystemMessage:
     """
-    Build the ReAct system message with dynamically injected tool descriptions.
+    Build the ReAct system message with dynamically injected tool descriptions
+    and optional retrieved context from long-term memory.
 
     Args:
         tools: A list of LangChain tool instances. Each tool should have
                a `name` and `description` attribute.
+        retrieved_context: Optional pre-fetched context from the vector store
+                           to ground the agent's responses.
 
     Returns:
         SystemMessage: A LangChain SystemMessage containing the complete
-                       ReAct prompt with tool descriptions.
+                       ReAct prompt with tool descriptions and context.
     """
     tool_descriptions = "\n".join(
         f"- **{tool.name}**: {tool.description}"
         for tool in tools
     )
 
+    context_section = (
+        retrieved_context
+        if retrieved_context
+        else "No prior context retrieved for this query."
+    )
+
     prompt_text = REACT_SYSTEM_PROMPT_TEMPLATE.format(
         tool_descriptions=tool_descriptions,
+        retrieved_context=context_section,
     )
 
     return SystemMessage(content=prompt_text)

@@ -10,3 +10,6 @@ langchain-tavily
 arxiv
 wikipedia
 requests
+faiss-cpu
+sentence-transformers
+langchain-huggingface

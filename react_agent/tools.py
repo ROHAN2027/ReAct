@@ -14,6 +14,7 @@ Available tools:
     - Python REPL: Execute Python code and return stdout/stderr
     - File Editor: Read, write, and list files in ./agent_workspace
     - Temporal: Get the current UTC date and time
+    - Long-Term Memory: Search past conversations in the Vector DB
 """
 
 import logging
@@ -105,6 +106,19 @@ class PythonREPLInput(BaseModel):
             "A valid Python code snippet to execute. The code should "
             "print its output to stdout. Use this for calculations, "
             "data transformations, logic, or any ephemeral computation."
+        ),
+    )
+
+
+class MemorySearchInput(BaseModel):
+    """Input schema for the long-term memory search tool."""
+
+    query: str = Field(
+        ...,
+        description=(
+            "A natural-language query to search past conversations. "
+            "Use this to find what the user discussed in previous sessions, "
+            "their preferences, past requests, or any historical context."
         ),
     )
 
@@ -452,10 +466,50 @@ def create_temporal_tool():
 
 
 # ---------------------------------------------------------------------------
+# Long-Term Memory Tool
+# ---------------------------------------------------------------------------
+
+def create_memory_search_tool(memory_manager):
+    """
+    Create a tool that searches the persistent long-term memory.
+
+    Args:
+        memory_manager: A VectorMemoryManager instance.
+
+    Returns:
+        A LangChain @tool decorated function.
+    """
+
+    @tool("search_long_term_memory", args_schema=MemorySearchInput)
+    def search_long_term_memory(query: str) -> str:
+        """
+        Search past conversations stored in long-term memory.
+
+        Use this tool to retrieve context from previous sessions.
+        Helpful when the user refers to something discussed earlier,
+        mentions their preferences, or asks about past interactions.
+        Returns the most relevant conversation snippets.
+        """
+        try:
+            results = memory_manager.search(query, k=5)
+            if not results:
+                return "No relevant memories found."
+            return "\n\n".join(results)
+        except Exception as e:
+            return (
+                f"Error: Failed to search long-term memory: {e}. "
+                "Please adjust your input or try a different tool."
+            )
+
+    logger.info("Long-term memory search tool initialized successfully.")
+    return search_long_term_memory
+
+
+# ---------------------------------------------------------------------------
 # Tool Registry
 # ---------------------------------------------------------------------------
 
-def get_all_tools() -> list:
+def get_all_tools() -> tuple:
     """
     Initialize and return all available tools for the ReAct agent.
 
@@ -465,15 +519,27 @@ def get_all_tools() -> list:
         - Python REPL (code execution)
         - File Editor: read_file, write_file, list_directory
         - Temporal (current UTC datetime)
+        - Long-Term Memory Search (vector DB retrieval)
 
     Returns:
-        list: All tool instances ready for LLM binding.
+        tuple: (tools_list, memory_manager) — all tool instances ready
+               for LLM binding and the VectorMemoryManager for indexing.
 
     Raises:
         RuntimeError: If any critical tool fails to initialize.
     """
+    from react_agent.memory import VectorMemoryManager
+
     tools = []
     errors = []
+
+    # --- Initialize the memory manager ---
+    try:
+        memory_manager = VectorMemoryManager()
+        logger.info("VectorMemoryManager initialized.")
+    except Exception as e:
+        logger.error("Failed to initialize VectorMemoryManager: %s", e)
+        raise RuntimeError(f"Failed to initialize memory system: {e}")
 
     # --- Single-instance tool creators ---
     single_tool_creators = [
@@ -494,6 +560,15 @@ def get_all_tools() -> list:
             logger.error(error_msg)
             errors.append(error_msg)
 
+    # --- Memory search tool (depends on memory_manager) ---
+    try:
+        memory_tool = create_memory_search_tool(memory_manager)
+        tools.append(memory_tool)
+    except Exception as e:
+        error_msg = f"Failed to initialize Long-Term Memory tool: {e}"
+        logger.error(error_msg)
+        errors.append(error_msg)
+
     # --- Multi-instance tool creators (toolkits) ---
     try:
         file_tools = create_file_editor_tools()
@@ -513,4 +588,4 @@ def get_all_tools() -> list:
         len(tools),
         [t.name for t in tools],
     )
-    return tools
+    return tools, memory_manager

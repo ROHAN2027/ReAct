@@ -9,10 +9,12 @@ Responsibilities:
     - Build the execution graph with Thought/Action/Observation loop
     - Provide a high-level `run_agent()` function for query execution
     - SafeToolNode for resilient tool execution with error recovery
+    - Session tracking and memory manager integration
 """
 
 import logging
 from typing import Annotated
+from uuid import uuid4
 
 from langchain_core.messages import AnyMessage, ToolMessage
 from langchain_groq import ChatGroq
@@ -166,30 +168,36 @@ def create_agent(model: str = DEFAULT_MODEL):
         - Dynamic tool descriptions
         - Contextual awareness instructions (temporal tool)
         - Tool selection guidance (REPL vs File Editor)
+        - Long-term memory retrieval instructions
 
     Args:
         model: The Groq model identifier to use.
 
     Returns:
-        tuple: (compiled_graph, tools_list) — the compiled LangGraph
-               StateGraph and the list of tool instances.
+        tuple: (compiled_graph, tools_list, memory_manager, session_id) —
+               the compiled LangGraph StateGraph, the list of tool instances,
+               the VectorMemoryManager for indexing, and the session UUID.
     """
-    # 1. Initialize all tools (7 individual + 3 from file toolkit = 10 total)
-    tools = get_all_tools()
+    # 1. Generate a unique session ID for this agent session
+    session_id = str(uuid4())
+    logger.info("Session ID: %s", session_id)
+
+    # 2. Initialize all tools and the memory manager
+    tools, memory_manager = get_all_tools()
     logger.info(
         "Tools loaded (%d): %s",
         len(tools),
         [t.name for t in tools],
     )
 
-    # 2. Build the system message with tool descriptions
+    # 3. Build the system message with tool descriptions
     system_message = build_system_message(tools)
 
-    # 3. Initialize LLM and bind tools
+    # 4. Initialize LLM and bind tools
     llm = _create_llm(model)
     llm_with_tools = llm.bind_tools(tools=tools)
 
-    # 4. Define the agent node
+    # 5. Define the agent node
     def agent_node(state: AgentState) -> dict:
         """
         The agent reasoning node.
@@ -208,7 +216,7 @@ def create_agent(model: str = DEFAULT_MODEL):
         response = llm_with_tools.invoke(full_messages)
         return {"messages": [response]}
 
-    # 5. Build the state graph
+    # 6. Build the state graph
     builder = StateGraph(AgentState)
 
     # Add nodes
@@ -220,11 +228,64 @@ def create_agent(model: str = DEFAULT_MODEL):
     builder.add_conditional_edges("agent", tools_condition)
     builder.add_edge("tools", "agent")  # Loop back for multi-step reasoning
 
-    # 6. Compile and return
+    # 7. Compile and return
     graph = builder.compile()
     logger.info("Agent graph compiled successfully.")
 
-    return graph, tools
+    return graph, tools, memory_manager, session_id
+
+
+# ---------------------------------------------------------------------------
+# Memory Indexing Helper
+# ---------------------------------------------------------------------------
+
+def save_interaction_to_memory(
+    messages: list,
+    memory_manager,
+    session_id: str,
+    user_input: str,
+):
+    """
+    Extract the agent's final response from messages and save the
+    interaction (user input + agent response) to long-term memory.
+
+    Args:
+        messages: The full message list from graph.invoke().
+        memory_manager: The VectorMemoryManager instance.
+        session_id: The current session UUID.
+        user_input: The original user input string.
+    """
+    try:
+        # Find the last AIMessage that isn't a tool call
+        agent_response = ""
+        for msg in reversed(messages):
+            if msg.type == "ai" and msg.content and not getattr(
+                msg, "tool_calls", None
+            ):
+                agent_response = msg.content
+                break
+
+        if not agent_response:
+            # Fallback: use the last message with content
+            for msg in reversed(messages):
+                if hasattr(msg, "content") and msg.content:
+                    agent_response = str(msg.content)
+                    break
+
+        if agent_response:
+            memory_manager.add_interaction(
+                user_input=user_input,
+                agent_response=agent_response,
+                session_id=session_id,
+            )
+            logger.info("Interaction saved to long-term memory.")
+        else:
+            logger.warning(
+                "No agent response found to save to memory."
+            )
+
+    except Exception as e:
+        logger.error("Failed to save interaction to memory: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -245,10 +306,19 @@ def run_agent(query: str, graph=None, model: str = DEFAULT_MODEL) -> list:
                           including the agent's reasoning and final answer.
     """
     if graph is None:
-        graph, _ = create_agent(model)
+        graph, _, memory_manager, session_id = create_agent(model)
+    else:
+        memory_manager = None
+        session_id = None
 
     logger.info("Running agent with query: %s", query[:100])
 
     result = graph.invoke({"messages": query})
+
+    # Auto-index the interaction if memory is available
+    if memory_manager is not None:
+        save_interaction_to_memory(
+            result["messages"], memory_manager, session_id, query
+        )
 
     return result["messages"]
